@@ -1,6 +1,8 @@
 import appEvents from 'app/core/app_events';
 import { QueryCtrl } from 'app/plugins/sdk';
 
+import './editor/editor_component';
+
 function makeDefaultQuery(database) {
   return `from(db: "${database}")
   |> range($range)
@@ -48,6 +50,16 @@ export class InfluxIfqlQueryCtrl extends QueryCtrl {
     this.dataPreview = '';
     this.resultRecordCount = '';
     this.resultTableCount = '';
+  };
+
+  onChange = nextQuery => {
+    console.log('nextQuery', nextQuery);
+    this.target.query = nextQuery;
+  };
+
+  onExecute = () => {
+    console.log('Influx refresh metric data', this.target);
+    this.panelCtrl.refresh();
   };
 
   getCollapsedText() {
