@@ -1,4 +1,5 @@
 // import React from 'react';
+import Plain from 'slate-plain-serializer';
 
 import QueryField, { getInitialValue, TYPEAHEAD_DEBOUNCE } from 'app/containers/Explore/QueryField';
 import debounce from 'app/containers/Explore/utils/debounce';
@@ -33,10 +34,15 @@ export default class FluxQueryField extends QueryField {
         return;
       }
 
+      // DOM ranges
       const range = selection.getRangeAt(0);
       const text = selection.anchorNode.textContent;
       const offset = range.startOffset;
       const prefix = cleanText(text.substr(0, offset));
+
+      // Model ranges
+      const modelOffset = this.state.value.anchorOffset;
+      const modelPrefix = this.state.value.anchorText.text.slice(0, modelOffset);
 
       // Determine candidates by context
       const suggestionGroups = [];
@@ -106,19 +112,15 @@ export default class FluxQueryField extends QueryField {
           typeaheadContext = 'context-labels';
           suggestionGroups.push({ label: 'Labels', items: labelKeys });
         }
-      } else if (metricNode && wrapperClasses.contains('context-aggregation')) {
-        typeaheadContext = 'context-aggregation';
-        const metric = metricNode.textContent;
-        const labelKeys = this.state.labelKeys[metric];
-        if (labelKeys) {
-          suggestionGroups.push({ label: 'Labels', items: labelKeys });
-        } else {
-          this.fetchMetricLabels(metric);
-        }
-      } else if (
-        (this.state.metrics && ((prefix && !wrapperClasses.contains('token')) || text.match(/[+\-*/^%]/))) ||
-        wrapperClasses.contains('context-function')
-      ) {
+      } else if (modelPrefix.match(/(^\s+$)|(\)\s+$)/)) {
+        // Operators after functions
+        typeaheadContext = 'context-operator';
+        suggestionGroups.push({
+          prefixMatch: true,
+          label: 'Operators',
+          items: ['|>', '<-', '+', '-', '*', '/', '<', '>', '<=', '=>', '==', '=~', '!=', '!~'],
+        });
+      } else if (prefix) {
         // Need prefix for functions
         typeaheadContext = 'context-builtin';
         suggestionGroups.push({
@@ -126,19 +128,32 @@ export default class FluxQueryField extends QueryField {
           label: 'Functions',
           items: FUNCTIONS,
         });
+      } else if (Plain.serialize(this.state.value) === '' || text.match(/[+\-*/^%]/)) {
+        // Need prefix for functions
+        typeaheadContext = 'context-new';
+        suggestionGroups.push({
+          prefixMatch: true,
+          label: 'Functions',
+          items: ['from(db: "telegraf") |> range($range) '],
+        });
+        suggestionGroups.push({
+          prefixMatch: true,
+          label: 'Shortcodes',
+          items: ['telegraf..'],
+        });
       }
 
       let results = 0;
       const filteredSuggestions = suggestionGroups.map(group => {
-        if (group.items) {
+        if (group.items && prefix) {
           group.items = group.items.filter(c => c.length >= prefix.length);
           if (group.prefixMatch) {
             group.items = group.items.filter(c => c.indexOf(prefix) === 0);
           } else {
             group.items = group.items.filter(c => c.indexOf(prefix) > -1);
           }
-          results += group.items.length;
         }
+        results += group.items.length;
         return group;
       });
 
@@ -164,6 +179,14 @@ export default class FluxQueryField extends QueryField {
         if (!nextChar && nextChar !== '(') {
           suggestion += '()';
           move = -1;
+        }
+        break;
+      }
+
+      case 'context-operator': {
+        const nextChar = getNextCharacter();
+        if (!nextChar && nextChar !== ' ') {
+          suggestion += ' ';
         }
         break;
       }

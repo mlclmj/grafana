@@ -38,17 +38,49 @@ const tokenizer = {
     lookbehind: true,
     greedy: true,
   },
+  'empty-context': /^$/, // telegraf.cpu.usage_host
+  'short-context': {
+    pattern: /^\w+\.\.(\w+\.\.)?\w*$/i,
+    alias: 'symbol',
+    inside: {
+      'short-database': /^\w+/,
+      'short-measurement': {
+        pattern: /\.\.\w+\.\./,
+      },
+      'short-field': {
+        pattern: /\w+$/,
+      },
+    },
+  },
+  'function-context': {
+    pattern: /[a-z0-9_]+\(.*?\)/i,
+    inside: {},
+  },
+  duration: {
+    pattern: /-?\d+(ns|u|µ|ms|s|m|h|d|w)/i,
+    alias: 'number',
+  },
+  builtin: new RegExp(`\\b(?:${FUNCTIONS.join('|')})(?=\\s*\\()`, 'i'),
   string: {
     pattern: /(["'])(?:\\(?:\r\n|[\s\S])|(?!\1)[^\\\r\n])*\1/,
     greedy: true,
   },
-  builtin: new RegExp(`\\b(?:${FUNCTIONS.join('|')})(?=\\s*\\()`, 'i'),
   keyword: /\b(?:and|empty|import|in|not|or|return)\b/,
   boolean: /\b(?:true|false)\b/,
-  function: /[a-z0-9_]+(?=\()/i,
   number: /\b0x[\da-f]+\b|(?:\b\d+\.?\d*|\B\.\d+)(?:e[+-]?\d+)?/i,
   operator: /-|\+|\*|\/|%|==|<=?|>=?|!=|!~|=~|=|<-|\|>/,
   punctuation: /[{}[\];(),.:]/,
+};
+
+tokenizer['function-context'].inside = {
+  argument: {
+    pattern: /[a-z0-9_]+(?=:)/i,
+    alias: 'symbol',
+  },
+  duration: tokenizer.duration,
+  number: tokenizer.number,
+  builtin: tokenizer.builtin,
+  string: tokenizer.string,
 };
 
 export default tokenizer;
