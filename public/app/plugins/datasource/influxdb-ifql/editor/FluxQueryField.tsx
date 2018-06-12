@@ -121,20 +121,20 @@ export default class FluxQueryField extends QueryField {
           label: 'Operators',
           items: ['|>', '<-', '+', '-', '*', '/', '<', '>', '<=', '=>', '==', '=~', '!=', '!~'].map(wrapText),
         });
-      } else if (prefix) {
+      } else if (prefix && !wrapperClasses.contains('argument')) {
         // Need prefix for functions
         typeaheadContext = 'context-builtin';
         suggestionGroups.push({
           prefixMatch: true,
           label: 'Functions',
-          items: FUNCTIONS.map(wrapText),
+          items: FUNCTIONS,
         });
       } else if (Plain.serialize(this.state.value) === '' || text.match(/[+\-*/^%]/)) {
         // Need prefix for functions
         typeaheadContext = 'context-new';
         suggestionGroups.push({
           prefixMatch: true,
-          label: 'Functions',
+          label: 'Templates',
           items: [`from(db: "${database}") |> range($range) `].map(wrapText),
         });
         suggestionGroups.push({
