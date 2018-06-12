@@ -1,4 +1,4 @@
-// import React from 'react';
+import { Block, Document, Text } from 'slate';
 import Plain from 'slate-plain-serializer';
 
 import QueryField, { getInitialValue } from 'app/containers/Explore/QueryField';
@@ -16,11 +16,11 @@ const DEFAULT_DATABASE = 'telegraf';
 function expandQuery(database, measurement, field) {
   if (field) {
     return (
-      `from(db: "${database}")` +
-      `  |> filter(fn: (r) => r["_measurement"] == "${measurement}" AND r["_field"] == "${field}") |> range($range) |> limit(n: 1000)`
+      `from(db: "${database}")\n` +
+      `  |> filter(fn: (r) => r["_measurement"] == "${measurement}" AND r["_field"] == "${field}")\n  |> range($range)\n  |> limit(n: 1000)`
     );
   }
-  return `from(db: "${database}") |> filter(fn: (r) => r["_measurement"] == "${measurement}") |> range($range) |> limit(n: 1000)`;
+  return `from(db: "${database}")\n  |> filter(fn: (r) => r["_measurement"] == "${measurement}")\n  |> range($range)\n  |> limit(n: 1000)`;
 }
 
 export default class FluxQueryField extends QueryField {
@@ -214,15 +214,32 @@ export default class FluxQueryField extends QueryField {
     const midWord = typeaheadPrefix && ((suffixLength > 0 && offset > -1) || suggestionText === typeaheadText);
     const forward = midWord ? suffixLength + offset : 0;
 
-    return (
-      change
-        // TODO this line breaks if cursor was moved left and length is longer than whole prefix
+    // If new-lines, apply suggestion as block
+    if (suggestionText.match(/\n/)) {
+      const lines = suggestionText.split('\n').map(line =>
+        Block.create({
+          type: 'paragraph',
+          nodes: [Text.create(line)],
+        })
+      );
+
+      const block = Document.create({
+        nodes: lines,
+      });
+
+      return change
         .deleteBackward(backward)
         .deleteForward(forward)
-        .insertText(suggestionText)
-        .move(move)
-        .focus()
-    );
+        .insertFragment(block)
+        .focus();
+    }
+
+    return change
+      .deleteBackward(backward)
+      .deleteForward(forward)
+      .insertText(suggestionText)
+      .move(move)
+      .focus();
   }
 
   async fetchFields(db, measurement) {
