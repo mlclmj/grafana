@@ -53,8 +53,8 @@ export const FUNCTIONS = [
   },
   {
     text: 'range',
-    display: 'range(start: -1h, stop: -30m)',
-    hint: 'Filters the results by time boundaries "start" and "stop".',
+    display: 'range(start: -1h, stop: -30m) or range($range)',
+    hint: 'Filters the results by time boundaries "start" and "stop". Use "$range" to apply the dashboard range.',
   },
   { text: 'sample', display: 'sample(n: 10)', hint: 'Selects a every "n"-th record from the input table.' },
   { text: 'set', display: 'set(key: "myKey", value: "42")', hint: 'Assigns a static value to each record' },

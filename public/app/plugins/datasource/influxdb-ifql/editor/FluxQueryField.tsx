@@ -1,7 +1,7 @@
 // import React from 'react';
 import Plain from 'slate-plain-serializer';
 
-import QueryField, { getInitialValue, TYPEAHEAD_DEBOUNCE } from 'app/containers/Explore/QueryField';
+import QueryField, { getInitialValue } from 'app/containers/Explore/QueryField';
 import debounce from 'app/containers/Explore/utils/debounce';
 import { getNextCharacter, getPreviousCousin } from 'app/containers/Explore/utils/dom';
 
@@ -167,7 +167,7 @@ export default class FluxQueryField extends QueryField {
         suggestions: results > 0 ? filteredSuggestions : [],
       });
     }
-  }, TYPEAHEAD_DEBOUNCE);
+  }, 500);
 
   applyTypeahead(change, suggestion) {
     const { typeaheadPrefix, typeaheadContext, typeaheadText } = this.state;
