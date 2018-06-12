@@ -1,7 +1,8 @@
 <query-editor-row query-ctrl="ctrl" can-collapse="true">
 
   <div class="gf-form" style="align-items: stretch">
-    <ifql-editor class="gf-form-input" style="border: none" query="ctrl.target.query" change="ctrl.onChange" execute="ctrl.onExecute"></ifql-editor>
+    <ifql-editor class="gf-form-input" database="ctrl.defaultDatabase" request="ctrl.requestMetadata" style="border: none" query="ctrl.target.query"
+      change="ctrl.onChange" execute="ctrl.onExecute"></ifql-editor>
     <!-- Result preview -->
     <textarea rows="10" class="gf-form-input" ng-model="ctrl.dataPreview" readonly></textarea>
   </div>

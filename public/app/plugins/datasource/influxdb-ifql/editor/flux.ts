@@ -38,18 +38,16 @@ const tokenizer = {
     lookbehind: true,
     greedy: true,
   },
-  'empty-context': /^$/, // telegraf.cpu.usage_host
-  'short-context': {
+  'context-short': {
     pattern: /^\w+\.\.(\w+\.\.)?\w*$/i,
     alias: 'symbol',
     inside: {
-      'short-database': /^\w+/,
-      'short-measurement': {
-        pattern: /\.\.\w+\.\./,
-      },
-      'short-field': {
-        pattern: /\w+$/,
-      },
+      'short-root': /^\w+(?=\.\.)/,
+      'short-delimiter': /\.\./,
+      'short-field': /\w+$/,
+      // 'short-measurement': {
+      //   pattern: /\.\.\w+\.\./,
+      // },
     },
   },
   'function-context': {

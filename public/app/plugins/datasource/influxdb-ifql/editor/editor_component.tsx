@@ -35,21 +35,24 @@ class Editor extends Component<any, any> {
   };
 
   render() {
+    const { database, request } = this.props;
     const { edited, query } = this.state;
 
     return (
       <div className="gf-form-input">
         <FluxQueryField
+          defaultDatabase={database}
           initialQuery={edited ? null : query}
           onPressEnter={this.handlePressEnter}
           onQueryChange={this.handleChangeQuery}
           prismLanguage="python"
           prismDefinition={flux}
           placeholder="Enter a FLUX query"
+          request={request}
         />
       </div>
     );
   }
 }
 
-react2AngularDirective('ifqlEditor', Editor, ['change', 'execute', 'query']);
+react2AngularDirective('ifqlEditor', Editor, ['change', 'database', 'execute', 'query', 'request']);

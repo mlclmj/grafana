@@ -13,6 +13,7 @@ export class InfluxIfqlQueryCtrl extends QueryCtrl {
   static templateUrl = 'partials/query.editor.html';
 
   dataPreview: string;
+  defaultDatabase: string;
   resultRecordCount: string;
   resultTableCount: string;
   resultFormats: any[];
@@ -27,6 +28,8 @@ export class InfluxIfqlQueryCtrl extends QueryCtrl {
     if (this.target.query === undefined) {
       this.target.query = makeDefaultQuery(this.datasource.database);
     }
+
+    this.defaultDatabase = this.datasource.database;
     this.resultFormats = [{ text: 'Time series', value: 'time_series' }, { text: 'Table', value: 'table' }];
 
     appEvents.on('ds-request-response', this.onResponseReceived, $scope);
@@ -60,6 +63,10 @@ export class InfluxIfqlQueryCtrl extends QueryCtrl {
   onExecute = () => {
     console.log('Influx refresh metric data', this.target);
     this.panelCtrl.refresh();
+  };
+
+  requestMetadata = query => {
+    return this.datasource.metricFindQuery(query);
   };
 
   getCollapsedText() {

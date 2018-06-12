@@ -8,13 +8,27 @@ import { getNextCharacter, getPreviousCousin } from 'app/containers/Explore/util
 import { FUNCTIONS } from './flux';
 
 const cleanText = s => s.replace(/[{}[\]="(),!~+\-*/^%]/g, '').trim();
+const wrapText = text => ({ text });
+
 const RATE_RANGES = ['1m', '5m', '10m', '30m', '1h'];
-const EMPTY_METRIC = '';
+const DEFAULT_DATABASE = 'telegraf';
+
+function expandQuery(database, measurement, field) {
+  if (field) {
+    return (
+      `from(db: "${database}")` +
+      `  |> filter(fn: (r) => r["_measurement"] == "${measurement}" AND r["_field"] == "${field}") |> range($range) |> limit(n: 1000)`
+    );
+  }
+  return `from(db: "${database}") |> filter(fn: (r) => r["_measurement"] == "${measurement}") |> range($range) |> limit(n: 1000)`;
+}
 
 export default class FluxQueryField extends QueryField {
+  fields: any;
+  measurements: any;
+
   componentDidMount() {
     this.updateMenu();
-    // TODO fetch measurements
   }
 
   componentWillReceiveProps(nextProps) {
@@ -38,7 +52,7 @@ export default class FluxQueryField extends QueryField {
       const range = selection.getRangeAt(0);
       const text = selection.anchorNode.textContent;
       const offset = range.startOffset;
-      const prefix = cleanText(text.substr(0, offset));
+      let prefix = cleanText(text.substr(0, offset));
 
       // Model ranges
       const modelOffset = this.state.value.anchorOffset;
@@ -49,68 +63,55 @@ export default class FluxQueryField extends QueryField {
       const wrapperClasses = wrapperNode.classList;
       let typeaheadContext = null;
 
-      // Take first metric as lucky guess
-      const metricNode = editorNode.querySelector('.metric');
+      const database = this.props.defaultDatabase || DEFAULT_DATABASE;
 
       if (wrapperClasses.contains('context-range')) {
         // Rate ranges
         typeaheadContext = 'context-range';
         suggestionGroups.push({
           label: 'Range vector',
-          items: [...RATE_RANGES],
+          items: [...RATE_RANGES].map(wrapText),
         });
-      } else if (wrapperClasses.contains('context-labels') && metricNode) {
-        const metric = metricNode.textContent;
-        const labelKeys = this.state.labelKeys[metric];
-        if (labelKeys) {
-          if ((text && text.startsWith('=')) || wrapperClasses.contains('attr-value')) {
-            // Label values
-            const labelKeyNode = getPreviousCousin(wrapperNode, '.attr-name');
-            if (labelKeyNode) {
-              const labelKey = labelKeyNode.textContent;
-              const labelValues = this.state.labelValues[metric][labelKey];
-              typeaheadContext = 'context-label-values';
-              suggestionGroups.push({
-                label: 'Label values',
-                items: labelValues,
-              });
-            }
+      } else if (wrapperClasses.contains('short-delimiter') || wrapperClasses.contains('short-field')) {
+        // Suggest measurements or fields
+        const databaseNode = getPreviousCousin(wrapperNode, '.short-root');
+        const db = databaseNode && databaseNode.textContent.replace('..', '');
+        const measurementNode = getPreviousCousin(wrapperNode, '.short-field');
+        const measurement = measurementNode && measurementNode.textContent;
+
+        if (db && measurement) {
+          prefix = prefix.replace(/\w*\.\./g, '');
+          // Expand
+          const expandedQuery = expandQuery(db, measurement, prefix);
+          suggestionGroups.push({
+            label: 'Expand',
+            items: [
+              {
+                deleteBackwards: modelOffset,
+                text: expandedQuery,
+              },
+            ],
+            skipFilter: true,
+          });
+          // Additional fields
+          const fields = this.fields && this.fields[db] && this.fields[db][measurement];
+          if (fields) {
+            typeaheadContext = 'context-fields';
+            suggestionGroups.push({ label: 'Fields', items: fields });
           } else {
-            // Label keys
-            typeaheadContext = 'context-labels';
-            suggestionGroups.push({ label: 'Labels', items: labelKeys });
+            this.fetchFields(db, measurement);
+            return;
           }
-        } else {
-          this.fetchMetricLabels(metric);
-        }
-      } else if (wrapperClasses.contains('context-labels') && !metricNode) {
-        // Empty name queries
-        const defaultKeys = ['job', 'instance'];
-        // Munge all keys that we have seen together
-        const labelKeys = Object.keys(this.state.labelKeys).reduce((acc, metric) => {
-          return acc.concat(this.state.labelKeys[metric].filter(key => acc.indexOf(key) === -1));
-        }, defaultKeys);
-        if ((text && text.startsWith('=')) || wrapperClasses.contains('attr-value')) {
-          // Label values
-          const labelKeyNode = getPreviousCousin(wrapperNode, '.attr-name');
-          if (labelKeyNode) {
-            const labelKey = labelKeyNode.textContent;
-            if (this.state.labelValues[EMPTY_METRIC]) {
-              const labelValues = this.state.labelValues[EMPTY_METRIC][labelKey];
-              typeaheadContext = 'context-label-values';
-              suggestionGroups.push({
-                label: 'Label values',
-                items: labelValues,
-              });
-            } else {
-              // Can only query label values for now (API to query keys is under development)
-              this.fetchLabelValues(labelKey);
-            }
+        } else if (db) {
+          const measurements = this.measurements && this.measurements[db];
+          if (measurements) {
+            prefix = prefix.replace(/\w*\.\./g, '');
+            typeaheadContext = 'context-measurements';
+            suggestionGroups.push({ label: 'Measurements', items: measurements });
+          } else {
+            this.fetchMeasurements(db);
+            return;
           }
-        } else {
-          // Label keys
-          typeaheadContext = 'context-labels';
-          suggestionGroups.push({ label: 'Labels', items: labelKeys });
         }
       } else if (modelPrefix.match(/(^\s+$)|(\)\s+$)/)) {
         // Operators after functions
@@ -118,7 +119,7 @@ export default class FluxQueryField extends QueryField {
         suggestionGroups.push({
           prefixMatch: true,
           label: 'Operators',
-          items: ['|>', '<-', '+', '-', '*', '/', '<', '>', '<=', '=>', '==', '=~', '!=', '!~'],
+          items: ['|>', '<-', '+', '-', '*', '/', '<', '>', '<=', '=>', '==', '=~', '!=', '!~'].map(wrapText),
         });
       } else if (prefix) {
         // Need prefix for functions
@@ -126,7 +127,7 @@ export default class FluxQueryField extends QueryField {
         suggestionGroups.push({
           prefixMatch: true,
           label: 'Functions',
-          items: FUNCTIONS,
+          items: FUNCTIONS.map(wrapText),
         });
       } else if (Plain.serialize(this.state.value) === '' || text.match(/[+\-*/^%]/)) {
         // Need prefix for functions
@@ -134,23 +135,23 @@ export default class FluxQueryField extends QueryField {
         suggestionGroups.push({
           prefixMatch: true,
           label: 'Functions',
-          items: ['from(db: "telegraf") |> range($range) '],
+          items: [`from(db: "${database}") |> range($range) `].map(wrapText),
         });
         suggestionGroups.push({
           prefixMatch: true,
           label: 'Shortcodes',
-          items: ['telegraf..'],
+          items: [`${database}..`].map(wrapText),
         });
       }
 
       let results = 0;
       const filteredSuggestions = suggestionGroups.map(group => {
-        if (group.items && prefix) {
-          group.items = group.items.filter(c => c.length >= prefix.length);
+        if (group.items && prefix && !group.skipFilter) {
+          group.items = group.items.filter(c => c.text.length >= prefix.length);
           if (group.prefixMatch) {
-            group.items = group.items.filter(c => c.indexOf(prefix) === 0);
+            group.items = group.items.filter(c => c.text.indexOf(prefix) === 0);
           } else {
-            group.items = group.items.filter(c => c.indexOf(prefix) > -1);
+            group.items = group.items.filter(c => c.text.indexOf(prefix) > -1);
           }
         }
         results += group.items.length;
@@ -170,6 +171,7 @@ export default class FluxQueryField extends QueryField {
 
   applyTypeahead(change, suggestion) {
     const { typeaheadPrefix, typeaheadContext, typeaheadText } = this.state;
+    let suggestionText = suggestion.text;
     let move = 0;
 
     // Modify suggestion based on context
@@ -177,7 +179,7 @@ export default class FluxQueryField extends QueryField {
       case 'context-builtin': {
         const nextChar = getNextCharacter();
         if (!nextChar && nextChar !== '(') {
-          suggestion += '()';
+          suggestionText += '()';
           move = -1;
         }
         break;
@@ -186,26 +188,15 @@ export default class FluxQueryField extends QueryField {
       case 'context-operator': {
         const nextChar = getNextCharacter();
         if (!nextChar && nextChar !== ' ') {
-          suggestion += ' ';
+          suggestionText += ' ';
         }
         break;
       }
 
-      case 'context-labels': {
+      case 'context-measurements': {
         const nextChar = getNextCharacter();
-        if (!nextChar || nextChar === '}' || nextChar === ',') {
-          suggestion += '=';
-        }
-        break;
-      }
-
-      case 'context-label-values': {
-        // Always add quotes and remove existing ones instead
-        if (!(typeaheadText.startsWith('="') || typeaheadText.startsWith('"'))) {
-          suggestion = `"${suggestion}`;
-        }
-        if (getNextCharacter() !== '"') {
-          suggestion = `${suggestion}"`;
+        if (!nextChar && nextChar !== '.') {
+          suggestionText += '..';
         }
         break;
       }
@@ -216,11 +207,11 @@ export default class FluxQueryField extends QueryField {
     this.resetTypeahead();
 
     // Remove the current, incomplete text and replace it with the selected suggestion
-    const backward = typeaheadPrefix.length;
+    const backward = suggestion.deleteBackwards || typeaheadPrefix.length;
     const text = cleanText(typeaheadText);
     const suffixLength = text.length - typeaheadPrefix.length;
     const offset = typeaheadText.indexOf(typeaheadPrefix);
-    const midWord = typeaheadPrefix && ((suffixLength > 0 && offset > -1) || suggestion === typeaheadText);
+    const midWord = typeaheadPrefix && ((suffixLength > 0 && offset > -1) || suggestionText === typeaheadText);
     const forward = midWord ? suffixLength + offset : 0;
 
     return (
@@ -228,9 +219,32 @@ export default class FluxQueryField extends QueryField {
         // TODO this line breaks if cursor was moved left and length is longer than whole prefix
         .deleteBackward(backward)
         .deleteForward(forward)
-        .insertText(suggestion)
+        .insertText(suggestionText)
         .move(move)
         .focus()
     );
+  }
+
+  async fetchFields(db, measurement) {
+    const query = `field_keys(${db},${measurement})`;
+    const result = await this.request(query);
+    if (!this.fields) {
+      this.fields = {};
+    }
+    if (!this.fields[db]) {
+      this.fields[db] = {};
+    }
+    this.fields[db][measurement] = result;
+    setTimeout(this.handleTypeahead, 0);
+  }
+
+  async fetchMeasurements(db) {
+    const query = `measurements(${db})`;
+    const result = await this.request(query);
+    if (!this.measurements) {
+      this.measurements = {};
+    }
+    this.measurements[db] = result;
+    setTimeout(this.handleTypeahead, 0);
   }
 }
