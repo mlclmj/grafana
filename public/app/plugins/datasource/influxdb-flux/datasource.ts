@@ -46,7 +46,7 @@ export default class InfluxDatasource {
 
   /** @ngInject */
   constructor(instanceSettings, private backendSrv, private templateSrv) {
-    this.type = 'influxdb-ifql';
+    this.type = 'influxdb-flux';
     this.url = instanceSettings.url.trim();
 
     this.username = instanceSettings.username;
@@ -207,7 +207,7 @@ export default class InfluxDatasource {
       result => {
         return result;
       },
-      function(err) {
+      function (err) {
         if (err.status !== 0 || err.status >= 300) {
           if (err.data && err.data.error) {
             throw {

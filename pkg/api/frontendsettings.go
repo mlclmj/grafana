@@ -86,7 +86,7 @@ func getFrontendSettingsMap(c *m.ReqContext) (map[string]interface{}, error) {
 				dsMap["url"] = url
 			}
 
-			if ds.Type == m.DS_INFLUXDB_IFQL {
+			if ds.Type == m.DS_INFLUXDB_FLUX {
 				dsMap["username"] = ds.User
 				dsMap["password"] = ds.Password
 				dsMap["database"] = ds.Database
@@ -102,7 +102,7 @@ func getFrontendSettingsMap(c *m.ReqContext) (map[string]interface{}, error) {
 			dsMap["database"] = ds.Database
 		}
 
-		if ds.Type == m.DS_INFLUXDB_IFQL {
+		if ds.Type == m.DS_INFLUXDB_FLUX {
 			dsMap["database"] = ds.Database
 		}
 

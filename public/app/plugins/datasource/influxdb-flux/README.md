@@ -1,14 +1,14 @@
-# InfluxDB (IFQL) Datasource [BETA] -  Native Plugin
+# InfluxDB (Flux) Datasource [BETA] -  Native Plugin
 
 Grafana ships with **built in** support for InfluxDB (>= 1.4.1).
 
-Use this datasource if you want to use IFQL to query your InfluxDB.
-Feel free to run this datasource side-by-side with the non-IFQL datasource.
+Use this datasource if you want to use Flux to query your InfluxDB.
+Feel free to run this datasource side-by-side with the non-Flux datasource.
 If you point both datasources to the same InfluxDB instance, you can switch query mode by switching the datasources.
 
-Read more about IFQL here:
+Read more about Flux here:
 
-[https://github.com/influxdata/ifql](https://github.com/influxdata/ifql)
+[https://github.com/influxdata/platform/tree/master/query](https://github.com/influxdata/platform/tree/master/query)
 
 Read more about InfluxDB here:
 

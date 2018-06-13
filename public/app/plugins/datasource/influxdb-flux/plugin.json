@@ -1,7 +1,7 @@
 {
   "type": "datasource",
-  "name": "InfluxDB (IFQL) [BETA]",
-  "id": "influxdb-ifql",
+  "name": "InfluxDB (Flux) [BETA]",
+  "id": "influxdb-flux",
   "defaultMatchFormat": "regex values",
   "metrics": true,
   "annotations": true,
@@ -10,7 +10,7 @@
     "minInterval": true
   },
   "info": {
-    "description": "InfluxDB Data Source for IFQL Queries for Grafana",
+    "description": "InfluxDB Data Source for Flux Queries for Grafana",
     "author": {
       "name": "Grafana Project",
       "url": "https://grafana.com"

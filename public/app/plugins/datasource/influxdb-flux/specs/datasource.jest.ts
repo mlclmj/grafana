@@ -4,7 +4,7 @@ import { TemplateSrv } from 'app/features/templating/template_srv';
 
 import Datasource from '../datasource';
 
-describe('InfluxDB (IFQL)', () => {
+describe('InfluxDB (Flux)', () => {
   const templateSrv = new TemplateSrv();
   const ds = new Datasource({ url: '' }, {}, templateSrv);
   const DEFAULT_OPTIONS = {

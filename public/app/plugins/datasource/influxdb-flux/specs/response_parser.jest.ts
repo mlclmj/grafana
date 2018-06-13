@@ -9,7 +9,7 @@ import {
 } from '../response_parser';
 import response from './sample_response_csv';
 
-describe('influxdb ifql response parser', () => {
+describe('influxdb flux response parser', () => {
   describe('parseResults()', () => {
     it('expects three results', () => {
       const results = parseResults(response);

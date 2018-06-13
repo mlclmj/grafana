@@ -9,7 +9,7 @@ function makeDefaultQuery(database) {
   |> limit(n:1000)
 `;
 }
-export class InfluxIfqlQueryCtrl extends QueryCtrl {
+export class InfluxFluxQueryCtrl extends QueryCtrl {
   static templateUrl = 'partials/query.editor.html';
 
   dataPreview: string;

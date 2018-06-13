@@ -55,4 +55,4 @@ class Editor extends Component<any, any> {
   }
 }
 
-react2AngularDirective('ifqlEditor', Editor, ['change', 'database', 'execute', 'query', 'request']);
+react2AngularDirective('fluxEditor', Editor, ['change', 'database', 'execute', 'query', 'request']);
